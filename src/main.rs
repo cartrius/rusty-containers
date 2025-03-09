@@ -1,4 +1,7 @@
+mod commands;
+
 use clap::{Parser, Subcommand};
+use commands::list_containers;
 
 #[derive(Parser)]
 #[command(name = "rusty-containers")]
@@ -29,7 +32,7 @@ async fn main() -> anyhow::Result<()> {
 
     match cli.command {
         Commands::Ls => {
-            println!("Listing containers (ph)");
+            list_containers().await?;
         },
         Commands::Pull { image } => {
             println!("Pulling image: {image} (ph)");
