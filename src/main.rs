@@ -2,6 +2,9 @@ mod commands;
 
 use clap::{Parser, Subcommand};
 use commands::list_containers;
+use commands::pull_image;
+use commands::run_container;
+use commands::stop_container;
 
 #[derive(Parser)]
 #[command(name = "rusty-containers")]
@@ -35,13 +38,13 @@ async fn main() -> anyhow::Result<()> {
             list_containers().await?;
         },
         Commands::Pull { image } => {
-            println!("Pulling image: {image} (ph)");
+            pull_image(&image).await?;
         },
         Commands::Run { image } => {
-            println!("Running container from image: {image} (ph)");
+            run_container(&image).await?;
         },
         Commands::Stop { container_id } => {
-            println!("Stopping container with ID: {container_id} (ph)");
+            stop_container(&container_id).await?;
         }
     }
     
