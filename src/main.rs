@@ -5,6 +5,7 @@ use commands::list_containers;
 use commands::pull_image;
 use commands::run_container;
 use commands::stop_container;
+use commands::logs_container;
 
 #[derive(Parser)]
 #[command(name = "rusty-containers")]
@@ -26,6 +27,11 @@ enum Commands {
     Stop {
         container_id: String,
     },
+    Logs {
+        container_id: String,
+        #[arg(short, long)]
+        follow: bool, // Follow logs in real time
+    }
 }
 
 #[tokio::main]
@@ -45,6 +51,9 @@ async fn main() -> anyhow::Result<()> {
         },
         Commands::Stop { container_id } => {
             stop_container(&container_id).await?;
+        },
+        Commands::Logs { container_id, follow } => {
+            logs_container(&container_id, follow).await?;
         }
     }
     

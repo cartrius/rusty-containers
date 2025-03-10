@@ -1,5 +1,5 @@
 use bollard::Docker;
-use bollard::container::{Config, CreateContainerOptions, ListContainersOptions, StartContainerOptions};
+use bollard::container::{Config, CreateContainerOptions, ListContainersOptions, LogsOptions, StartContainerOptions};
 use bollard::image::CreateImageOptions;
 use futures_util::stream::TryStreamExt;
 use std::default::Default;
@@ -52,7 +52,7 @@ pub async fn run_container(image: &str) -> Result<()> {
 
     let create_response = docker.create_container(
         Some(CreateContainerOptions {
-            name: "my_rust_container",
+            name: "my_rust_container2",
         }),
         Config {
             image: Some(image),
@@ -78,5 +78,28 @@ pub async fn stop_container(container_id: &str) -> Result<()> {
     let docker = Docker::connect_with_local_defaults()?;
     docker.stop_container(container_id, None).await?;
     println!("Stopped container: {}", container_id);
+    Ok(())
+}
+
+pub async fn logs_container(container_id: &str, follow: bool) -> Result<()> {
+    let docker = Docker::connect_with_local_defaults()?;
+
+    let mut logs_stream = docker.logs(
+        container_id,
+        Some(LogsOptions::<String> {
+            follow,
+            stdout: true,
+            stderr: true,
+            tail: "all".to_string(),
+            ..Default::default()
+        })
+    );
+
+    // Each frame is a chunk of log data
+    while let Some(log_result) = logs_stream.try_next().await? {
+        // log_result may be plain text or contain metadata
+        println!("log {}", log_result);
+    }
+
     Ok(())
 }
