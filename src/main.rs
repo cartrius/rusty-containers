@@ -6,6 +6,7 @@ use commands::pull_image;
 use commands::run_container;
 use commands::stop_container;
 use commands::logs_container;
+use commands::exec_in_container;
 
 #[derive(Parser)]
 #[command(name = "rusty-containers")]
@@ -23,6 +24,10 @@ enum Commands {
     },
     Run {
         image: String,
+        #[arg(short='e', long="env", num_args=1..)]
+        envs: Vec<String>,
+        #[arg(long="volume", num_args=1..)]
+        volumes: Vec<String>,
     },
     Stop {
         container_id: String,
@@ -31,6 +36,11 @@ enum Commands {
         container_id: String,
         #[arg(short, long)]
         follow: bool, // Follow logs in real time
+    },
+    Exec {
+        container_id: String,
+        #[arg(last = true)]
+        cmd: Vec<String>,
     }
 }
 
@@ -46,14 +56,17 @@ async fn main() -> anyhow::Result<()> {
         Commands::Pull { image } => {
             pull_image(&image).await?;
         },
-        Commands::Run { image } => {
-            run_container(&image).await?;
+        Commands::Run { image , envs, volumes } => {
+            run_container(&image, &envs, &volumes).await?;
         },
         Commands::Stop { container_id } => {
             stop_container(&container_id).await?;
         },
         Commands::Logs { container_id, follow } => {
             logs_container(&container_id, follow).await?;
+        }
+        Commands::Exec { container_id, cmd } => {
+            exec_in_container(&container_id, &cmd).await?;
         }
     }
     

@@ -1,6 +1,8 @@
 use bollard::Docker;
 use bollard::container::{Config, CreateContainerOptions, ListContainersOptions, LogsOptions, StartContainerOptions};
 use bollard::image::CreateImageOptions;
+use bollard::exec::{CreateExecOptions, StartExecResults};
+use bollard::models::HostConfig;
 use futures_util::stream::TryStreamExt;
 use std::default::Default;
 use anyhow::Result;
@@ -47,19 +49,37 @@ pub async fn pull_image(image: &str) -> Result<()> {
     Ok(())
 }
 
-pub async fn run_container(image: &str) -> Result<()> {
+pub async fn run_container(image: &str, envs: &[String], volumes: &[String]) -> Result<()> {
     let docker = Docker::connect_with_local_defaults()?;
+
+    // Convert envs into format ["KEY=VALUE", ...]
+    let environment = if !envs.is_empty() {
+        Some(envs.iter().map(|s| &**s).collect::<Vec<&str>>())
+    } else {
+        None
+    };
+
+    // Convert volumes into format ["/host/path:/container/path", ...]
+    let host_config = if !volumes.is_empty() {
+        Some(HostConfig {
+            binds: Some(volumes.iter().map(|s| s.to_string()).collect()),
+            ..Default::default()
+        })
+    } else {
+        None
+    };
 
     let create_response = docker.create_container(
         Some(CreateContainerOptions {
-            name: "my_rust_container2",
+            name: "my_rust_container3",
         }),
         Config {
             image: Some(image),
+            env: environment,
+            host_config,
             tty: Some(true),
-            // Enivronment variables, volumes, etc here
             ..Default::default()
-        }
+        },
     ).await?;
 
     let id = create_response.id;
@@ -99,6 +119,39 @@ pub async fn logs_container(container_id: &str, follow: bool) -> Result<()> {
     while let Some(log_result) = logs_stream.try_next().await? {
         // log_result may be plain text or contain metadata
         println!("log {}", log_result);
+    }
+
+    Ok(())
+}
+
+pub async fn exec_in_container(container_id: &str, cmd: &[String]) -> Result<()> {
+    let docker = Docker::connect_with_local_defaults()?;
+
+    // Similar to 'docker exec'
+    let exec = docker.create_exec(
+        container_id,
+        CreateExecOptions {
+            cmd: Some(cmd.to_vec()),
+            attach_stdout: Some(true),
+            attach_stderr: Some(true),
+            tty: Some(false),
+            ..Default::default()
+        }
+    ).await?;
+
+    // Start the exec session and capture output
+    let start_result = docker.start_exec(&exec.id, None).await?;
+
+    match start_result {
+        StartExecResults::Attached { mut output, .. } => {
+            // Stream output
+            while let Some(msg) = output.try_next().await? {
+                print!("{}", msg);
+            }
+        }
+        StartExecResults::Detached => {
+            println!("Command executed in detached mode");
+        }
     }
 
     Ok(())
