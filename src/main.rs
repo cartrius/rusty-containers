@@ -1,12 +1,7 @@
 mod commands;
 
 use clap::{Parser, Subcommand};
-use commands::list_containers;
-use commands::pull_image;
-use commands::run_container;
-use commands::stop_container;
-use commands::logs_container;
-use commands::exec_in_container;
+use commands::{list_containers, pull_image, run_container, stop_container, logs_container, exec_in_container};
 
 #[derive(Parser)]
 #[command(name = "rusty-containers")]
